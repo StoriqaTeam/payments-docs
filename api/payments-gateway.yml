@@ -4,13 +4,15 @@ servers:
   - url: 'http://payments.storiqa.com/v1'
 info:
   description: Api server for wallet payments.
-  version: "1.0.2"
-  title: Payments
+  version: "1.1.0"
+  title: Payments gateway
   contact:
     email: a.karasev@storiqa.com
 tags:
   - name: users
     description: Login, register, user management, etc.
+  - name: invoices
+    description: Invoice management
   - name: accounts
     description: Managements of accounts
   - name: balances
@@ -18,6 +20,87 @@ tags:
   - name: transactions
     description: Managements of transactions
 paths:
+  /invoices/callback:
+    post:
+      summary: A callback endpoint from upstream Accounts core
+      description: Updated the status of the invoice. This method is not intended for calling from outside. Custom auth scheme will be used
+      security:
+        - Bearer: []
+      tags:
+        - invoices
+      responses:
+        204:
+          description: Ok
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/Invoice'
+  
+  /users/{userId}/invoices:
+    get:
+      summary: Get list of invoices for a user
+      description: You need to be authenticated to use this method.
+      security:
+        - Bearer: []
+      tags:
+        - invoices
+      parameters:
+        - $ref: '#/components/parameters/userIdParam'
+        - $ref: '#/components/parameters/invoiceIdParam'
+        - $ref: '#/components/parameters/offsetParam'
+        - $ref: '#/components/parameters/limitParam'
+      responses:
+        200:
+          description: Ok
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Invoice'
+
+    post:
+      summary: Create an invoice
+      description: You need to be authenticated to use this method.
+      security:
+        - Bearer: []
+      tags:
+        - invoices
+      parameters:
+        - $ref: '#/components/parameters/userIdParam'
+      responses:
+        200:
+          description: Ok
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Invoice'
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateInvoiceInput'
+
+  /users/{userId}/invoices/{invoiceId}:
+    get:
+      summary: Get an invoice details
+      description: You need to be authenticated to use this method.
+      security:
+        - Bearer: []
+      tags:
+        - invoices
+      parameters:
+        - $ref: '#/components/parameters/userIdParam'
+        - $ref: '#/components/parameters/invoiceIdParam'
+      responses:
+        200:
+          description: Ok
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Invoice'
+
   /users/{userId}/accounts/{accountId}/balance:
     get:
       summary: Returns balance of account
@@ -506,11 +589,15 @@ components:
     UserId:
       type: string
       description: Id of a User in our system
-      example: jghkdfgdjfgkdf7gd
+      example: user43975874jghkdf
     AccountId:
       type: string
       description: Id of Account in our system
-      example: jghkdfgdjfgkdf7gd
+      example: acc734895jghkdf
+    InvoiceId:
+      type: string
+      description: Id of Invoice in our system
+      example: inv74329823asdjk
 
     ObfuscatedUserAccount:
       type: object
@@ -634,6 +721,8 @@ components:
           $ref: '#/components/schemas/Currency'
         value:
           $ref: '#/components/schemas/Value'
+        holdUntil:
+          $ref: '#/components/schemas/Timestamp'
     Transaction:
       type: object
       required:
@@ -642,6 +731,8 @@ components:
         - toAddress
         - currency
         - value
+        - status
+        - createdAt
       properties:
         id:
           $ref: '#/components/schemas/Id'
@@ -653,6 +744,16 @@ components:
           $ref: '#/components/schemas/Currency'
         value:
           $ref: '#/components/schemas/Value'
+        status:
+          $ref: '#/components/schemas/TransactionStatus'
+        createdAt:
+          $ref: '#/components/schemas/Timestamp'
+        holdUntil:
+          $ref: '#/components/schemas/Timestamp'
+    TransactionStatus:
+      type: string
+      enum: [pending|done|cancelled]
+      example: pending
     AccountAddress:
       type: string
       description: Either blockchain address or fiat account number (depending on currency)
@@ -775,12 +876,81 @@ components:
           description: IMEI. Requied for mobile only.
           type: string
           example: 1237987834798375349
+    Invoice:
+      type: object
+      required:
+        - id
+        - status
+        - currency
+        - value
+        - to
+      properties:
+        id:
+          $ref: '#/components/schemas/InvoiceId'
+        status:
+          type: string
+          description: 'unpaid - no payments made, processing - incoming payment is made, but outgoing is not, done - invoice processing is done'
+          enum: [unpaid|processing|done]
+        currency:
+          $ref: '#/components/schemas/Currency'
+        value:
+          $ref: '#/components/schemas/Value'
+        to:
+          type: array
+          description: Invoice payment receivers
+          items:
+            type: object
+            properties:
+              userId:
+                $ref: '#/components/schemas/UserId'
+              currency:
+                $ref: '#/components/schemas/Currency'
+              value:
+                $ref: '#/components/schemas/Value'
+    CreateInvoiceInput:
+      type: object
+      required:
+        - id
+        - currency
+        - value
+        - to
+      properties:
+        id:
+          $ref: '#/components/schemas/InvoiceId'
+        currency:
+          $ref: '#/components/schemas/Currency'
+        value:
+          $ref: '#/components/schemas/Value'
+        to:
+          type: array
+          description: Invoice payment receivers
+          items:
+            type: object
+            properties:
+              userId:
+                $ref: '#/components/schemas/UserId'
+              currency:
+                $ref: '#/components/schemas/Currency'
+              value:
+                $ref: '#/components/schemas/Value'
+    Timestamp:
+      type: string
+      format: date-time
+      example: '2017-07-21T17:32:28Z'
   securitySchemes:
     Bearer:
       type: apiKey
       name: Authorization
       in: header
   parameters:
+    invoiceIdParam:
+      name: invoiceId
+      in: path
+      description: ID of invoice
+      required: true
+      schema:
+        $ref: '#/components/schemas/InvoiceId'
+
     userIdParam:
       name: userId
       in: path

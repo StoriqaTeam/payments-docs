@@ -405,6 +405,9 @@ components:
           $ref: '#/components/schemas/Currency'
         value:
           $ref: '#/components/schemas/Value'
+        holdUntil:
+          $ref: '#/components/schemas/Timestamp'
+
     Transaction:
       type: object
       required:
@@ -413,6 +416,7 @@ components:
         - toAddress
         - currency
         - value
+        - createdAt
       properties:
         id:
           $ref: '#/components/schemas/Id'
@@ -424,6 +428,11 @@ components:
           $ref: '#/components/schemas/Currency'
         value:
           $ref: '#/components/schemas/Value'
+        createdAt:
+          $ref: '#/components/schemas/Timestamp'
+        holdUntil:
+          $ref: '#/components/schemas/Timestamp'
+
     AccountAddress:
       type: string
       description: Either blockchain address or fiat account number (depending on currency)
@@ -525,6 +534,10 @@ components:
         companyName:
           type: string
           example: Storiqa
+    Timestamp:
+      type: string
+      format: date-time
+      example: '2017-07-21T17:32:28Z'
   securitySchemes:
     Bearer:
       type: apiKey

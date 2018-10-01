@@ -231,6 +231,7 @@ paths:
           application/json:
             schema:
               $ref: '#/components/schemas/TransactionCreateInput'
+
   '/users/{userId}/accounts/{accountId}/transactions':
     get:
       summary: Lists all transactions of a user's account
@@ -255,6 +256,25 @@ paths:
           $ref: '#/components/responses/Unauthorized'
         500:
           $ref: '#/components/responses/Internal'
+  '/users/{userId}/transactions/{transactionId}':
+    delete:
+      summary: Cancels a transaction for a user
+      description: Only users with `userId` are allowed to create a transaction. The transaction can only be canceled if it is on hold.
+      security:
+        - Bearer: []
+      tags:
+        - transactions
+      parameters:
+        - $ref: '#/components/parameters/userIdParam'
+        - $ref: '#/components/parameters/transactionIdParam'
+      responses:
+        204:
+          description: Transaction was cancelled successfully
+        401:
+          $ref: '#/components/responses/Unauthorized'
+        500:
+          $ref: '#/components/responses/Internal'
+
 components:
   responses:
     NotFound:
@@ -544,6 +564,14 @@ components:
       name: Authorization
       in: header
   parameters:
+    transactionIdParam:
+      name: transactionId
+      in: path
+      description: ID of transaction
+      required: true
+      schema:
+        $ref: '#/components/schemas/Id'
+  
     userIdParam:
       name: userId
       in: path
